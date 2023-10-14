@@ -12,13 +12,15 @@ class ATMTest {
 
     private static AmountSelector amountSelectorMock;
     private static CashManager cashManagerMock;
+    private static PaymentProcessor paymentProcessorMock;
     private static ATM atm;
 
     @BeforeAll
     static void setup() {
         amountSelectorMock = mock(AmountSelector.class);
         cashManagerMock = mock(CashManager.class);
-        atm = new ATM(amountSelectorMock, cashManagerMock, mock(PaymentProcessor.class));
+        paymentProcessorMock = mock(PaymentProcessor.class);
+        atm = new ATM(amountSelectorMock, cashManagerMock, paymentProcessorMock);
     }
 
     @Test
@@ -47,12 +49,43 @@ class ATMTest {
     }
 
     @Test
-    void testRunCashWithdrawal_WithAvailableCash_ReturnsOperationDoneStatus() throws ATMTechnicalException {
+    void testRunCashWithdrawal_WithAvailableCashAndFailedPayment_ReturnsPaymentRejectedStatus() throws ATMTechnicalException {
+
+        int validAmount = 120;
+
+        when(amountSelectorMock.selectAmount()).thenReturn(validAmount);
+        when(cashManagerMock.canDeliver(validAmount)).thenReturn(true);
+        when(paymentProcessorMock.pay(validAmount)).thenReturn(PaymentStatus.FAILURE);
+
+        ATMStatus atmStatus = atm.runCashWithdrawal();
+
+        assertEquals(ATMStatus.PAYMENT_REJECTED, atmStatus);
+
+    }
+
+    @Test
+    void testRunCashWithdrawal_WithAvailableCashAndNullPayment_ReturnsPaymentRejectedStatus() throws ATMTechnicalException {
+
+        int validAmount = 140;
+
+        when(amountSelectorMock.selectAmount()).thenReturn(validAmount);
+        when(cashManagerMock.canDeliver(validAmount)).thenReturn(true);
+        when(paymentProcessorMock.pay(validAmount)).thenReturn(null);
+
+        ATMStatus atmStatus = atm.runCashWithdrawal();
+
+        assertEquals(ATMStatus.PAYMENT_REJECTED, atmStatus);
+
+    }
+
+    @Test
+    void testRunCashWithdrawal_WithAvailableCashAndSuccessPayment_ReturnsOperationDoneStatus() throws ATMTechnicalException {
 
         int validAmount = 80;
 
         when(amountSelectorMock.selectAmount()).thenReturn(validAmount);
         when(cashManagerMock.canDeliver(validAmount)).thenReturn(true);
+        when(paymentProcessorMock.pay(validAmount)).thenReturn(PaymentStatus.SUCCESS);
 
         ATMStatus atmStatus = atm.runCashWithdrawal();
 
